@@ -24,13 +24,13 @@ import (
 //code and the underlying code responsible for sending and receiving
 //MQTT messages.
 type PacketAndToken struct {
-	p packets.ControlPacket
+	p packets.ControlPacket //控制包
 	t Token
 }
 
 //Token defines the interface for the tokens used to indicate when
 //actions have completed.
-type Token interface {
+type Token interface { //所有包均实该接口
 	Wait() bool
 	WaitTimeout(time.Duration) bool
 	flowComplete()
@@ -50,7 +50,7 @@ func (b *baseToken) Wait() bool {
 	b.m.Lock()
 	defer b.m.Unlock()
 	if !b.ready {
-		<-b.complete
+		<-b.complete //无限等待中。。。
 		b.ready = true
 	}
 	return b.ready
@@ -64,7 +64,7 @@ func (b *baseToken) WaitTimeout(d time.Duration) bool {
 	b.m.Lock()
 	defer b.m.Unlock()
 	if !b.ready {
-		select {
+		select { //无限等待，若达到超时时间，立即返回
 		case <-b.complete:
 			b.ready = true
 		case <-time.After(d):
@@ -102,7 +102,7 @@ func newToken(tType byte) Token {
 //ConnectToken is an extension of Token containing the extra fields
 //required to provide information about calls to Connect()
 type ConnectToken struct {
-	baseToken
+	baseToken  //将baseToken结构体包含之
 	returnCode byte
 }
 
@@ -117,7 +117,7 @@ func (c *ConnectToken) ReturnCode() byte {
 //PublishToken is an extension of Token containing the extra fields
 //required to provide information about calls to Publish()
 type PublishToken struct {
-	baseToken
+	baseToken //将baseToken结构体包含之
 	messageID uint16
 }
 
