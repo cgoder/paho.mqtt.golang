@@ -11,11 +11,11 @@ import (
 //ControlPacket defines the interface for structs intended to hold
 //decoded MQTT packets, either from being read or before being
 //written
-type ControlPacket interface {
-	Write(io.Writer) error
-	Unpack(io.Reader) error
-	String() string
-	Details() Details
+type ControlPacket interface { // 控制包数据接口，所有包类都应实现该接口。因为所有类型的包数据都必须以此为前提。
+	Write(io.Writer) error  //写包数据
+	Unpack(io.Reader) error //解包数据
+	String() string         //数据包详细信息字符串形式输出
+	Details() Details       //QOS MSGID
 }
 
 //PacketNames maps the constants for each of the MQTT packet types
@@ -99,24 +99,24 @@ var ConnErrors = map[byte]error{
 //representing the decoded MQTT packet and an error. One of these returns will
 //always be nil, a nil ControlPacket indicating an error occurred.
 func ReadPacket(r io.Reader) (cp ControlPacket, err error) {
-	var fh FixedHeader
+	var fh FixedHeader // 固定包头结构
 	b := make([]byte, 1)
 
-	_, err = io.ReadFull(r, b)
+	_, err = io.ReadFull(r, b) //先读取包第一个字节，以获取包的类型，是connect/publish/subscribe/disconnect 还是其它的。
 	if err != nil {
 		return nil, err
 	}
-	fh.unpack(b[0], r)
-	cp = NewControlPacketWithHeader(fh)
+	fh.unpack(b[0], r)                  //解析包头第一个字节，解析出更多详细信息，参见协议文档包头信息部分。
+	cp = NewControlPacketWithHeader(fh) //根据包头字节解析的详细信息以及包类型，构建不同类型的数据包。
 	if cp == nil {
 		return nil, errors.New("Bad data from client")
 	}
-	packetBytes := make([]byte, fh.RemainingLength)
+	packetBytes := make([]byte, fh.RemainingLength) //根据包头字节解析的包长度，初始化内存空间，读取数据流中实际的数据填充本地数据包
 	_, err = io.ReadFull(r, packetBytes)
 	if err != nil {
 		return nil, err
 	}
-	err = cp.Unpack(bytes.NewBuffer(packetBytes))
+	err = cp.Unpack(bytes.NewBuffer(packetBytes)) //每种实现了ControlPacket接口的包根据自己的类型来解析包数据。
 	return cp, err
 }
 
@@ -209,12 +209,12 @@ type Details struct {
 
 //FixedHeader is a struct to hold the decoded information from
 //the fixed header of an MQTT ControlPacket
-type FixedHeader struct {
-	MessageType     byte
-	Dup             bool
-	Qos             byte
-	Retain          bool
-	RemainingLength int
+type FixedHeader struct { //固定包头结构体
+	MessageType     byte //MQTT控制包类型。第1字节7~4位
+	Dup             bool //重复发送标志。第1字节第3位
+	Qos             byte //服务质量等级。第1字节第2~1位
+	Retain          bool //保留标志。第1字节第0位
+	RemainingLength int  //剩余数据长度。从第2字节开始，包括可变包头和有效数据在内，不包括第1字节及编码自己长度的字节。
 }
 
 func (fh FixedHeader) String() string {
@@ -230,6 +230,7 @@ func boolToByte(b bool) byte {
 	}
 }
 
+//编码包头
 func (fh *FixedHeader) pack() bytes.Buffer {
 	var header bytes.Buffer
 	header.WriteByte(fh.MessageType<<4 | boolToByte(fh.Dup)<<3 | fh.Qos<<1 | boolToByte(fh.Retain))
@@ -237,6 +238,7 @@ func (fh *FixedHeader) pack() bytes.Buffer {
 	return header
 }
 
+//解码包头
 func (fh *FixedHeader) unpack(typeAndFlags byte, r io.Reader) {
 	fh.MessageType = typeAndFlags >> 4
 	fh.Dup = (typeAndFlags>>3)&0x01 > 0
