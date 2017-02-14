@@ -210,7 +210,7 @@ type Details struct {
 //FixedHeader is a struct to hold the decoded information from
 //the fixed header of an MQTT ControlPacket
 type FixedHeader struct { //固定包头结构体
-	MessageType     byte //MQTT控制包类型。第1字节7~4位
+	MessageType     byte //MQTT控制包类型。第1字节第7~4位
 	Dup             bool //重复发送标志。第1字节第3位
 	Qos             byte //服务质量等级。第1字节第2~1位
 	Retain          bool //保留标志。第1字节第0位
