@@ -52,7 +52,7 @@ const (
 // information can be found in their respective documentation.
 // Numerous connection options may be specified by configuring a
 // and then supplying a ClientOptions type.
-
+//客户端接口
 type Client interface {
 	IsConnected() bool
 	Connect() Token
@@ -64,22 +64,23 @@ type Client interface {
 }
 
 // client implements the Client interface
+//客户端数据结构
 type client struct {
-	sync.RWMutex
-	messageIds
-	conn            net.Conn
-	ibound          chan packets.ControlPacket
+	sync.RWMutex                               //客户端连接读写锁
+	messageIds                                 //客户端消息map结构体
+	conn            net.Conn                   //客户端连接信息
+	ibound          chan packets.ControlPacket //控制包channel
 	obound          chan *PacketAndToken
 	oboundP         chan *PacketAndToken
 	msgRouter       *router
 	stopRouter      chan bool
-	incomingPubChan chan *packets.PublishPacket
+	incomingPubChan chan *packets.PublishPacket //消息发布监控channel
 	errors          chan error
-	stop            chan struct{}
-	persist         Store
-	options         ClientOptions
+	stop            chan struct{} //客户停止状态监控channel
+	persist         Store         //客户端消息持久化结接口
+	options         ClientOptions //客户端属性结体
 	pingResp        chan struct{}
-	status          connStatus
+	status          connStatus //客户端连接状态
 	workers         sync.WaitGroup
 }
 
