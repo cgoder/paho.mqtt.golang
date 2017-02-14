@@ -9,10 +9,10 @@ import (
 //PublishPacket is an internal representation of the fields of the
 //Publish MQTT packet
 type PublishPacket struct {
-	FixedHeader
-	TopicName string
-	MessageID uint16
-	Payload   []byte
+	FixedHeader        //固定包头
+	TopicName   string //订阅的topic
+	MessageID   uint16 //消息id
+	Payload     []byte //消息数据
 }
 
 func (p *PublishPacket) String() string {
@@ -28,7 +28,7 @@ func (p *PublishPacket) Write(w io.Writer) error {
 
 	body.Write(encodeString(p.TopicName))
 	if p.Qos > 0 {
-		body.Write(encodeUint16(p.MessageID))
+		body.Write(encodeUint16(p.MessageID)) //只有QOS>0时才能写入消息id
 	}
 	p.FixedHeader.RemainingLength = body.Len() + len(p.Payload)
 	packet := p.FixedHeader.pack()
@@ -44,7 +44,7 @@ func (p *PublishPacket) Write(w io.Writer) error {
 func (p *PublishPacket) Unpack(b io.Reader) error {
 	var payloadLength = p.FixedHeader.RemainingLength
 	p.TopicName = decodeString(b)
-	if p.Qos > 0 {
+	if p.Qos > 0 { //只有QOS>0才有消息id存在，此时有效数据长度要跳过2字节的长度。
 		p.MessageID = decodeUint16(b)
 		payloadLength -= len(p.TopicName) + 4
 	} else {
